@@ -6,8 +6,6 @@ import { XCircleIcon } from './icons/XCircleIcon';
 import { StarIcon } from './icons/StarIcon';
 import { DocumentArrowDownIcon } from './icons/DocumentArrowDownIcon';
 import { LightBulbIcon } from './icons/LightBulbIcon';
-import { ArrowTrendingDownIcon } from './icons/ArrowTrendingDownIcon';
-import { ArrowTrendingUpIcon } from './icons/ArrowTrendingUpIcon';
 import { PhoneIcon } from './icons/PhoneIcon';
 import { DataIcon } from './icons/DataIcon';
 import { DataRolloverIcon } from './icons/DataRolloverIcon';
@@ -112,9 +110,6 @@ const SavingsCalculator: React.FC = () => {
     const [step, setStep] = useState(1);
     const [lines, setLines] = useState<string>('');
     const [lineSpends, setLineSpends] = useState<number[]>([]);
-    // FIX: The initial value for reduce was an untyped `{}`, causing TypeScript to infer the state as an empty object.
-    // This has been corrected by explicitly providing the `OttSelection` type to both `useState` and the `reduce` accumulator,
-    // which resolves property access errors throughout the component.
     const [selectedOtts, setSelectedOtts] = useState<OttSelection>(
         ottServices.reduce<OttSelection>((acc, ott) => ({ ...acc, [ott.key]: { selected: false, cost: 0 } }), {})
     );
@@ -157,9 +152,9 @@ const SavingsCalculator: React.FC = () => {
     const calculateResults = () => {
         const numLines = parseInt(lines, 10);
         const currentLineSpending = lineSpends.reduce((a, b) => a + b, 0);
-        const userOtts = Object.entries(selectedOtts)
-            .filter(([, val]) => val.selected && val.cost > 0)
-            .map(([key, val]) => ({ key, cost: val.cost, name: ottServices.find(o => o.key === key)?.name || key }));
+        const userOtts = Object.keys(selectedOtts)
+            .filter((key) => selectedOtts[key].selected && selectedOtts[key].cost > 0)
+            .map((key) => ({ key, cost: selectedOtts[key].cost, name: ottServices.find(o => o.key === key)?.name || key }));
 
         const currentOttSpending = userOtts.reduce((acc, ott) => acc + ott.cost, 0);
         const totalCurrentSpending = currentLineSpending + currentOttSpending;
@@ -173,11 +168,10 @@ const SavingsCalculator: React.FC = () => {
                     planScenarios.push({ planKey: '871', addOns: Math.max(0, numLines - 2) });
                 }
             } else if (numLines === 4) {
-                 const plan701Cost = planData['701'].price + 2 * 299;
-                 const plan1201Cost = planData['1201'].price;
                  planScenarios.push({ planKey: '1201', addOns: 0 });
                  if(selectedOtts.netflix.selected) {
                     const plan871Cost = planData['871'].price + 2*299;
+                    const plan1201Cost = planData['1201'].price;
                     if (plan871Cost < plan1201Cost) {
                          planScenarios.push({ planKey: '871', addOns: 2 });
                     }
@@ -240,7 +234,7 @@ const SavingsCalculator: React.FC = () => {
         e.preventDefault();
         setError('');
         
-        const ottCosts = Object.values(selectedOtts).map(v => v.cost);
+        const ottCosts = Object.keys(selectedOtts).map(key => selectedOtts[key].cost);
         if (ottCosts.some(cost => cost < 0 || cost > 5000)) {
             setError('Please enter valid OTT costs (₹0-₹5,000).');
             return;
@@ -253,14 +247,15 @@ const SavingsCalculator: React.FC = () => {
     const handleDownloadPdf = () => {
         const reportElement = document.getElementById('savings-report');
         if (reportElement && typeof html2canvas !== 'undefined' && typeof jspdf !== 'undefined') {
-            const downloadButton = document.getElementById('download-pdf-button');
-            if (downloadButton) downloadButton.style.display = 'none';
+            const buttonsContainer = document.getElementById('report-buttons');
+            if (buttonsContainer) buttonsContainer.style.visibility = 'hidden';
 
             html2canvas(reportElement, {
                 scale: 2,
                 useCORS: true, 
+                backgroundColor: '#ffffff'
             }).then(canvas => {
-                if (downloadButton) downloadButton.style.display = 'inline-flex';
+                if (buttonsContainer) buttonsContainer.style.visibility = 'visible';
 
                 const imgData = canvas.toDataURL('image/png');
                 const pdf = new jspdf.jsPDF({
@@ -275,7 +270,7 @@ const SavingsCalculator: React.FC = () => {
                 pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
                 pdf.save('vi-plan-savings-report.pdf');
             }).catch(err => {
-                 if (downloadButton) downloadButton.style.display = 'inline-flex';
+                 if (buttonsContainer) buttonsContainer.style.visibility = 'visible';
                  console.error("Error generating PDF:", err);
                  setError("Sorry, we couldn't generate the PDF. Please try again.");
             });
@@ -289,7 +284,6 @@ const SavingsCalculator: React.FC = () => {
         setStep(1);
         setLines('');
         setLineSpends([]);
-        // FIX: Similarly, when resetting state, the new object must be correctly typed to avoid reintroducing type errors.
         setSelectedOtts(ottServices.reduce<OttSelection>((acc, ott) => ({ ...acc, [ott.key]: { selected: false, cost: 0 } }), {}));
         setResults(null);
         setError('');
@@ -297,38 +291,34 @@ const SavingsCalculator: React.FC = () => {
     
     const CurrentSpendingBreakdown: React.FC = () => {
         const currentLineSpending = lineSpends.reduce((a, b) => a + b, 0);
-        const userOtts = Object.entries(selectedOtts)
-            .filter(([, val]) => val.selected && val.cost > 0)
-            .map(([key, val]) => ({ key, cost: val.cost, name: ottServices.find(o => o.key === key)?.name || key }));
+        const userOtts = Object.keys(selectedOtts)
+            .filter((key) => selectedOtts[key].selected && selectedOtts[key].cost > 0)
+            .map((key) => ({ key, cost: selectedOtts[key].cost, name: ottServices.find(o => o.key === key)?.name || key }));
         const currentOttSpending = userOtts.reduce((acc, ott) => acc + ott.cost, 0);
         const totalCurrentSpending = currentLineSpending + currentOttSpending;
 
         return (
-             <div className="border border-gray-200 bg-gray-50 rounded-xl p-4 sm:p-6 mb-8 text-left text-sm">
-                <h3 className="font-bold text-gray-800 text-base mb-4">📊 Your Current Monthly Spending</h3>
+             <div className="border border-red-200 bg-red-50/50 rounded-xl p-4 sm:p-6 text-left text-sm">
+                <h3 className="font-bold text-red-900 text-base mb-4">👎 Your Current Monthly Spending</h3>
                 <div className="space-y-3">
                     <dl className="space-y-2">
                         <div className="flex justify-between items-baseline">
-                            <dt className="font-semibold text-gray-600">Mobile Lines Subtotal:</dt>
-                            <dd className="font-bold text-gray-800">₹{currentLineSpending}</dd>
+                            <dt className="font-semibold text-gray-700">Mobile Lines Subtotal:</dt>
+                            <dd className="font-bold text-gray-900">₹{currentLineSpending}</dd>
                         </div>
                         {userOtts.length > 0 && (
                             <div className="flex justify-between items-baseline">
-                                <dt className="font-semibold text-gray-600">OTT Subscriptions Subtotal:</dt>
-                                <dd className="font-bold text-gray-800">₹{currentOttSpending}</dd>
+                                <dt className="font-semibold text-gray-700">OTT Subscriptions Subtotal:</dt>
+                                <dd className="font-bold text-gray-900">₹{currentOttSpending}</dd>
                             </div>
                         )}
                     </dl>
                 </div>
-                <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+                <div className="mt-4 pt-4 border-t border-red-200 space-y-2">
                      <dl className="space-y-2">
                         <div className="flex justify-between items-baseline text-base">
-                            <dt className="font-extrabold text-gray-900">Total Monthly Spending:</dt>
-                            <dd className="font-extrabold text-gray-900">₹{totalCurrentSpending}</dd>
-                        </div>
-                         <div className="flex justify-between items-baseline text-xs text-gray-500">
-                            <dt>Equivalent Annual Spending:</dt>
-                            <dd>₹{totalCurrentSpending * 12}</dd>
+                            <dt className="font-extrabold text-red-900">Total Monthly Cost:</dt>
+                            <dd className="font-extrabold text-red-900">₹{totalCurrentSpending}</dd>
                         </div>
                     </dl>
                 </div>
@@ -337,29 +327,31 @@ const SavingsCalculator: React.FC = () => {
     };
 
     const PlanResultBreakdown: React.FC<{ result: Result, isBest: boolean }> = ({ result, isBest }) => {
-         const ottSavings = result.matchedOtts.reduce((acc, ott) => acc + ott.cost, 0);
-         const lineCostChange = result.newPlanCost - lineSpends.reduce((a,b)=>a+b, 0);
-
          return (
-            <div className={`relative border-2 rounded-2xl p-4 sm:p-6 text-left transition-all h-full flex flex-col ${isBest ? 'bg-white border-[#e60000] shadow-2xl' : 'bg-gray-50/50 border-gray-200'}`}>
-                {isBest && <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#e60000] text-white font-bold text-sm px-4 py-1 rounded-full flex items-center gap-1 shadow-lg"><StarIcon className="h-4 w-4"/> BETTER SAVINGS</div>}
+            <div className={`relative border-2 rounded-2xl p-4 sm:p-6 text-left transition-all h-full flex flex-col ${isBest ? 'bg-white border-green-500 shadow-2xl' : 'bg-gray-50/50 border-gray-200'}`}>
+                {isBest && <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white font-bold text-sm px-4 py-1 rounded-full flex items-center gap-1 shadow-lg"><StarIcon className="h-4 w-4"/> RECOMMENDED</div>}
                 
                 <h3 className="font-extrabold text-lg text-gray-900 mb-4 text-center sm:text-left">
-                    <span className="text-green-600">✔</span> Option: {result.planDetails.name}{result.addOns > 0 ? ` + ${result.addOns} Add-on` : ''}
+                    {result.planDetails.name}{result.addOns > 0 ? ` + ${result.addOns} Add-on` : ''}
                 </h3>
 
                 <div className="space-y-6 flex-grow">
                     
-                    <div className="p-3 bg-gray-100 rounded-lg">
-                        <p className="font-bold text-sm text-gray-600">New Plan Cost</p>
-                        <p className="font-extrabold text-2xl text-gray-900">₹{result.newPlanCost}<span className="text-base font-medium">/month</span></p>
+                     <div className="border border-green-200 bg-green-50/50 rounded-xl p-4 sm:p-6 text-left text-sm">
+                        <h3 className="font-bold text-green-900 text-base mb-4">👍 Your New VI Plan</h3>
+                         <dl className="space-y-2">
+                            <div className="flex justify-between items-baseline text-base">
+                                <dt className="font-extrabold text-green-900">New Monthly Cost:</dt>
+                                <dd className="font-extrabold text-green-900">₹{result.newPlanCost}</dd>
+                            </div>
+                        </dl>
                     </div>
-
+                    
                     <div>
-                        <p className="font-bold mb-2">Key Benefits Included:</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                        <p className="font-bold text-sm mb-2 text-gray-800">Key Benefits Included:</p>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
                              <div className="flex items-center gap-2"><PhoneIcon className="h-5 w-5 text-[#e60000]"/><span className="font-medium">Unlimited Calls</span></div>
-                             <div className="flex items-center gap-2"><DataIcon className="h-5 w-5 text-[#e60000]"/><span className="font-medium">{result.planDetails.dataPrimary} Primary Data</span></div>
+                             <div className="flex items-center gap-2"><DataIcon className="h-5 w-5 text-[#e60000]"/><span className="font-medium">{result.planDetails.dataPrimary} Primary</span></div>
                              <div className="flex items-center gap-2"><DataRolloverIcon className="h-5 w-5 text-[#e60000]"/><span className="font-medium">200GB Rollover</span></div>
                              <div className="flex items-center gap-2"><ChatBubbleLeftRightIcon className="h-5 w-5 text-[#e60000]"/><span className="font-medium">3000 SMS</span></div>
                              <div className="flex items-center gap-2"><UsersIcon className="h-5 w-5 text-[#e60000]"/><span className="font-medium">{result.planDetails.includedLines + result.addOns} Lines</span></div>
@@ -367,33 +359,20 @@ const SavingsCalculator: React.FC = () => {
                     </div>
                     
                     <div>
-                        <p className="font-bold mb-1">OTT Breakdown:</p>
+                        <p className="font-bold text-sm mb-1 text-gray-800">OTT Breakdown:</p>
                         <ul className="space-y-1 text-sm">
                             {result.matchedOtts.map(ott => (
-                                <li key={ott.key} className="flex items-center"><CheckIcon className="h-4 w-4 text-green-600 mr-2"/> <span className="font-semibold">{ott.name}</span>&nbsp;is included <span className="text-green-600 ml-auto font-bold">(Saves ₹{ott.cost})</span></li>
+                                <li key={ott.key} className="flex items-center"><CheckIcon className="h-4 w-4 text-green-600 mr-2 flex-shrink-0"/> <span className="font-semibold">{ott.name}</span>&nbsp;is included <span className="text-green-600 ml-auto font-bold">(Saves ₹{ott.cost})</span></li>
                             ))}
                             {result.unmatchedOtts.map(ott => (
-                                <li key={ott.key} className="flex items-center"><XCircleIcon className="h-4 w-4 text-red-500 mr-2"/> <span className="font-semibold">{ott.name}</span>&nbsp;is NOT included <span className="text-red-500 ml-auto font-bold">(Cost ₹{ott.cost})</span></li>
+                                <li key={ott.key} className="flex items-center"><XCircleIcon className="h-4 w-4 text-red-500 mr-2 flex-shrink-0"/> <span className="font-semibold">{ott.name}</span>&nbsp;is NOT included <span className="text-red-500 ml-auto font-bold">(Cost ₹{ott.cost})</span></li>
                             ))}
+                             {result.matchedOtts.length === 0 && result.unmatchedOtts.length === 0 && <li className="text-gray-500">No OTT services selected.</li>}
                         </ul>
                     </div>
 
                     <div className="!mt-auto pt-4 border-t border-dashed">
-                         <p className="font-bold mb-1">Savings Calculation:</p>
-                         <ul className="space-y-1 text-sm">
-                             <li className={`flex items-center ${lineCostChange > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                {lineCostChange > 0 ? <ArrowTrendingUpIcon className="h-4 w-4 mr-2"/> : <ArrowTrendingDownIcon className="h-4 w-4 mr-2"/>}
-                                Line cost change:
-                                <span className="ml-auto font-bold">{lineCostChange > 0 ? `+₹${lineCostChange}` : `-₹${-lineCostChange}`}</span>
-                             </li>
-                              <li className="flex items-center text-green-600">
-                                <ArrowTrendingDownIcon className="h-4 w-4 mr-2"/>
-                                OTT cost savings:
-                                <span className="ml-auto font-bold">-₹{ottSavings}</span>
-                             </li>
-                         </ul>
-                         
-                         <div className="mt-4 text-center bg-green-50 border border-green-200 p-3 rounded-lg">
+                         <div className="mt-4 text-center bg-green-100 border border-green-200 p-3 rounded-lg">
                             <p className="font-bold text-green-800 text-lg">Net Monthly Savings: ₹{result.monthlySavings}</p>
                             <p className="font-medium text-green-700 text-xs">Annual Savings: ₹{result.annualSavings}</p>
                          </div>
@@ -410,9 +389,9 @@ const SavingsCalculator: React.FC = () => {
                 return (
                     <form onSubmit={handleLinesSubmit} className="space-y-6 text-center">
                         <div>
-                            <label htmlFor="lines" className="block text-lg font-bold text-gray-800 mb-3">How many mobile lines do you currently have?</label>
+                            <label htmlFor="lines" className="block text-lg font-bold text-gray-800 mb-3">How many mobile lines do you have?</label>
                             <input type="number" id="lines" value={lines} onChange={(e) => setLines(e.target.value)}
-                                className="w-full max-w-xs mx-auto px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#e60000] focus:border-[#e60000] transition text-center text-xl"
+                                className="w-full max-w-xs mx-auto px-4 py-3 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-[#e60000] focus:border-[#e60000] transition text-center text-xl font-semibold"
                                 placeholder="e.g., 3" min="1" max="10" required autoFocus />
                         </div>
                         <button type="submit" className="bg-[#e60000] text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-red-700 transition-all duration-300 transform hover:scale-105">Next →</button>
@@ -421,7 +400,7 @@ const SavingsCalculator: React.FC = () => {
             case 2:
                 return (
                     <form onSubmit={handleSpendingSubmit} className="space-y-6">
-                        <h3 className="text-lg font-bold text-gray-800 text-center">Great! Let's understand your current spending for {lines} lines:</h3>
+                        <h3 className="text-lg font-bold text-gray-800 text-center">Enter your current monthly bill for {lines} lines:</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-60 overflow-y-auto pr-2">
                             {lineSpends.map((_, index) => (
                                 <div key={index}>
@@ -434,7 +413,7 @@ const SavingsCalculator: React.FC = () => {
                                                 spends[index] = parseInt(e.target.value, 10) || 0;
                                                 setLineSpends(spends);
                                             }}
-                                            className="w-full pl-7 pr-3 py-2 rounded-md border border-gray-300 focus:ring-1 focus:ring-[#e60000] focus:border-[#e60000] transition"
+                                            className="w-full pl-7 pr-3 py-2 rounded-md border-2 border-gray-300 focus:ring-1 focus:ring-[#e60000] focus:border-[#e60000] transition"
                                             placeholder="e.g., 450" required />
                                     </div>
                                 </div>
@@ -449,11 +428,11 @@ const SavingsCalculator: React.FC = () => {
             case 3:
                 return (
                     <form onSubmit={handleCalculate} className="space-y-4">
-                        <h3 className="text-lg font-bold text-gray-800 text-center">Do you subscribe to any of these OTT services?</h3>
+                        <h3 className="text-lg font-bold text-gray-800 text-center">Do you subscribe to any of these services?</h3>
                         <p className="text-center text-sm text-gray-500 -mt-2 mb-4">Select all that apply and enter your monthly cost.</p>
                         <div className="space-y-3 max-h-72 overflow-y-auto pr-2">
                             {ottServices.map(ott => (
-                                <div key={ott.key} className="flex items-center gap-3 bg-gray-50 p-2 rounded-lg">
+                                <div key={ott.key} className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-transparent has-[:checked]:bg-red-50 has-[:checked]:border-red-200 transition-colors">
                                     <input type="checkbox" id={ott.key} checked={selectedOtts[ott.key].selected}
                                         onChange={e => handleOttChange(ott.key, 'selected', e.target.checked)}
                                         className="h-5 w-5 rounded border-gray-300 text-[#e60000] focus:ring-[#e60000]" />
@@ -464,7 +443,7 @@ const SavingsCalculator: React.FC = () => {
                                             disabled={!selectedOtts[ott.key].selected}
                                             value={selectedOtts[ott.key].cost || ''}
                                             onChange={e => handleOttChange(ott.key, 'cost', parseInt(e.target.value, 10) || 0)}
-                                            className="w-28 pl-7 pr-2 py-1.5 text-sm rounded-md border border-gray-300 transition disabled:bg-gray-100 disabled:cursor-not-allowed" />
+                                            className="w-28 pl-7 pr-2 py-1.5 text-sm rounded-md border-2 border-gray-300 transition disabled:bg-gray-200 disabled:cursor-not-allowed" />
                                     </div>
                                 </div>
                             ))}
@@ -477,73 +456,62 @@ const SavingsCalculator: React.FC = () => {
                 );
             case 4:
                 const numLines = parseInt(lines, 10);
-                if (numLines === 1) return <div className="text-center"><p className="text-lg font-semibold">VI Max Family plans are designed for families with 2+ members. However, you can invite family members to join at ₹299 each and share the benefits!</p><button onClick={handleReset} className="mt-6 text-gray-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors">Start Over</button></div>;
-                if (numLines > 9) return <div className="text-center"><p className="text-lg font-semibold">You have more than 9 lines. Please contact VI customer support for enterprise plans.</p><button onClick={handleReset} className="mt-6 text-gray-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors">Start Over</button></div>;
+                if (numLines === 1) return <div className="text-center p-4"><p className="text-lg font-semibold">VI Max Family plans are for 2+ members. Invite family to join at ₹299 each and share the benefits!</p><button onClick={handleReset} className="mt-6 text-gray-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors">Start Over</button></div>;
+                if (numLines > 9) return <div className="text-center p-4"><p className="text-lg font-semibold">For more than 9 lines, please contact us for enterprise plans.</p><button onClick={handleReset} className="mt-6 text-gray-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors">Start Over</button></div>;
                 
                 if (!results || results.length === 0) {
                     return (
-                        <div className="text-center p-4">
-                            <h3 className="text-2xl font-extrabold text-gray-900">You already have the best plan!</h3>
-                            <p className="mt-2 text-gray-600">No additional savings available based on your current spending.</p>
-                            <p className="mt-4 text-sm text-gray-700 font-semibold">However, you can enhance your experience by:</p>
-                             <ul className="mt-2 text-sm text-gray-600 list-disc list-inside">
-                                <li>Inviting more family members at ₹299 each</li>
-                                <li>Upgrading to a higher plan for more data and benefits</li>
-                            </ul>
-                            <button onClick={handleReset} className="mt-6 text-gray-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors">Calculate Again</button>
+                        <div className="text-center p-4" style={{ animation: 'fadeInUp 0.5s ease-out' }}>
+                            <h3 className="text-2xl font-extrabold text-gray-900">Your current plan looks great!</h3>
+                            <p className="mt-2 text-gray-600">We couldn't find a VI family plan that offers significant savings based on your entries.</p>
+                             <CurrentSpendingBreakdown />
+                            <button onClick={handleReset} className="mt-6 bg-[#e60000] text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-red-700 transition-all">Calculate Again</button>
                         </div>
                     );
                 }
                 
                 const bestResult = results[0];
-                const totalCurrentSpending = lineSpends.reduce((a, b) => a + b, 0) + Object.values(selectedOtts).reduce((acc, ott) => acc + (ott.selected ? ott.cost : 0), 0);
+                const totalCurrentSpending = lineSpends.reduce((a, b) => a + b, 0) + Object.keys(selectedOtts).reduce((acc, key) => acc + (selectedOtts[key].selected ? selectedOtts[key].cost : 0), 0);
                 const whatsappMessage = `Namaste, I used the calculator for ${lines} lines. My current spend is ₹${totalCurrentSpending}. I'm interested in the ${bestResult.planDetails.name} plan to save ₹${bestResult.monthlySavings}/month. Please help me switch.`;
 
                 return (
-                     <div className="text-center space-y-8">
-                        <div id="savings-report">
-                            <div className="p-2">
-                                <h3 className="text-2xl font-extrabold text-gray-900">Your Personal Savings Report</h3>
-                                <p className="text-gray-600 mt-1">{results.length > 1 ? "We found multiple options that save you money. The best is highlighted." : "We found the best plan with positive savings for you."}</p>
+                     <div className="text-center space-y-8" style={{ animation: 'fadeInUp 0.5s ease-out' }}>
+                        <div id="savings-report" className="bg-white p-4 sm:p-6 rounded-lg">
+                             <div className="mb-8">
+                                <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Your Personal Savings Report</h3>
+                                <p className="text-gray-600 mt-1 max-w-2xl mx-auto">{results.length > 1 ? "We found multiple options that save you money. The best is highlighted." : "We found the perfect plan to help you save!"}</p>
                             </div>
-                            
-                            <CurrentSpendingBreakdown />
 
-                            <div className="w-full text-center my-4">
-                                <span className="inline-block text-xl font-bold text-gray-400">VS</span>
-                            </div>
-                            
-                            <h3 className="text-xl font-bold text-gray-900 -mb-4">{results.length > 1 ? "Your Recommended VI Plans" : "Your Recommended VI Plan"}</h3>
-                            
-                            <div className={`grid gap-8 ${results.length > 1 ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 max-w-2xl mx-auto'}`}>
-                                {results.map((res, index) => <PlanResultBreakdown key={index} result={res} isBest={index === 0} />)}
+                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                                <CurrentSpendingBreakdown />
+                                <PlanResultBreakdown result={bestResult} isBest={true} />
                             </div>
 
                             {results.length > 1 && (
-                                <div className="border-2 border-dashed border-yellow-400 bg-yellow-50 rounded-xl p-4 sm:p-6 text-left text-sm flex items-start gap-4">
+                                 <div className="mt-8 border-2 border-dashed border-yellow-400 bg-yellow-50 rounded-xl p-4 sm:p-6 text-left text-sm flex items-start gap-4">
                                     <LightBulbIcon className="h-8 w-8 text-yellow-500 flex-shrink-0 mt-1" />
                                     <div>
-                                        <h3 className="font-bold text-gray-800 text-base mb-1">Key Insight & Recommendation</h3>
-                                        <p className="text-gray-800 font-semibold">Choose {bestResult.planDetails.name} + {bestResult.addOns > 0 ? `${bestResult.addOns} Add-on` : ''}.</p>
-                                        <p className="mt-1 text-gray-700"><b>Why?</b> It saves you <b>₹{bestResult.monthlySavings - (results[1]?.monthlySavings || 0)} MORE</b> per month than the other option and includes extra benefits like {bestResult.planDetails.exclusiveBenefits.join(', ')}.</p>
+                                        <h3 className="font-bold text-gray-800 text-base mb-1">Expert Recommendation</h3>
+                                        <p className="text-gray-800 font-semibold">Choose the {bestResult.planDetails.name} plan.</p>
+                                        <p className="mt-1 text-gray-700"><b>Why?</b> It saves you an extra <b>₹{bestResult.monthlySavings - (results[1]?.monthlySavings || 0)} per month</b> compared to the next best option!</p>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                         <div className="space-y-4 pt-4">
+                         <div id="report-buttons" className="space-y-4 pt-4 border-t border-gray-200">
                              <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
                                 <a href={`https://wa.me/919913397555?text=${encodeURIComponent(whatsappMessage)}`} target="_blank" rel="noopener noreferrer"
                                     className="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 border border-transparent text-base font-bold rounded-full text-white bg-green-500 hover:bg-green-600 transform hover:scale-105 transition-all shadow-lg">
                                     <WhatsappIcon className="h-6 w-6 mr-3" />
                                     Switch & Save ₹{bestResult.monthlySavings}/month
                                 </a>
-                                <button id="download-pdf-button" onClick={handleDownloadPdf} className="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 border border-transparent text-base font-bold rounded-full text-white bg-gray-700 hover:bg-gray-800 transform hover:scale-105 transition-all shadow-lg">
+                                <button onClick={handleDownloadPdf} className="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 border-2 border-gray-300 text-base font-bold rounded-full text-gray-700 bg-white hover:bg-gray-100 transform hover:scale-105 transition-all shadow-sm">
                                     <DocumentArrowDownIcon className="h-6 w-6 mr-3" />
                                     Download Report
                                 </button>
                             </div>
-                            <button onClick={handleReset} className="block w-full sm:w-auto mx-auto text-gray-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors">
+                            <button onClick={handleReset} className="block w-full sm:w-auto mx-auto text-gray-600 font-medium py-2 px-6 rounded-full hover:bg-gray-100 transition-colors text-sm">
                                 Calculate Again
                             </button>
                         </div>
@@ -561,24 +529,26 @@ const SavingsCalculator: React.FC = () => {
     }, [step]);
 
     return (
-        <section id="calculator" className="py-20 bg-gray-50">
+        <section id="calculator" className="py-24 bg-gray-50 overflow-hidden">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center">
+                <div className="text-center animate-on-scroll fade-in-up">
                     <div className="flex justify-center items-center h-16 w-16 mx-auto bg-red-100 rounded-full mb-4">
                         <CalculatorIcon className="h-8 w-8 text-[#e60000]" />
                     </div>
-                    <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">VI Postpaid Plan Calculator</h2>
-                    <p className="mt-4 text-lg text-gray-600">Find the best plan and see how much you can save by eliminating duplicate OTT bills!</p>
+                    <h2 className="text-4xl font-extrabold text-gray-900 sm:text-5xl lg:text-6xl tracking-tighter">VI Postpaid Savings Calculator</h2>
+                    <p className="mt-4 text-lg text-gray-700 max-w-3xl mx-auto">Find the best family plan and see how much you can save by eliminating duplicate OTT bills!</p>
                 </div>
 
-                <div className="mt-12 max-w-5xl mx-auto bg-white p-4 sm:p-8 rounded-2xl shadow-lg border border-gray-200 transition-all duration-500">
+                <div className="mt-16 max-w-4xl mx-auto bg-white p-4 sm:p-8 rounded-2xl shadow-lg border border-gray-200 transition-all duration-500 animate-on-scroll fade-in-up" style={{ animationDelay: '200ms' }}>
                     {step < 4 && (
                         <div className="w-full bg-gray-200 rounded-full h-2.5 mb-8">
-                            <div className="bg-[#e60000] h-2.5 rounded-full transition-all duration-500" style={{ width: progress }}></div>
+                            <div className="bg-gradient-to-r from-[#e60000] to-[#ff3333] h-2.5 rounded-full transition-all duration-500" style={{ width: progress }}></div>
                         </div>
                     )}
-                    {error && <div className="mb-4 text-center bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg animate-pulse">{error}</div>}
-                    {renderStepContent()}
+                    {error && <div className="mb-4 text-center bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg" style={{ animation: 'pulse-glow 1.5s infinite ease-in-out' }}>{error}</div>}
+                    <div className="transition-all duration-300">
+                        {renderStepContent()}
+                    </div>
                 </div>
             </div>
         </section>

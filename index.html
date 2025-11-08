@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-IN">
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
@@ -9,16 +9,81 @@
     <meta name="keywords" content="VI postpaid Ahmedabad, MNP, doorstep activation, VI store Ahmedabad, postpaid plans, same day activation" />
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #e60000;
+            --color-primary-dark: #c00;
+            --color-text: #1a1a1a;
+            --color-text-muted: #555;
+            --color-surface: #ffffff;
+            --color-background: #f8f9fa;
+            --color-border: #e9ecef;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            scroll-behavior: smooth;
+            background-color: var(--color-background);
+            color: var(--color-text);
+        }
+        
+        ::selection {
+            background-color: var(--color-primary);
+            color: white;
+        }
+
+        /* Animation Keyframes */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes backgroundPan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(230, 0, 0, 0.4); }
+            50% { transform: scale(1.03); box-shadow: 0 0 20px 10px rgba(230, 0, 0, 0); }
+        }
+        
+        @keyframes ripple {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4), 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            40% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0), 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            80% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0), 0 0 0 30px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0), 0 0 0 30px rgba(34, 197, 94, 0); }
+        }
+
+        @keyframes shine {
+            to {
+                background-position-x: -200%;
+            }
+        }
+
+        /* Scroll Animation Utility Classes */
+        .animate-on-scroll {
+            opacity: 0;
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+
+        .fade-in-up {
+            transform: translateY(30px);
+        }
+
+        .is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
 
     <!-- Google Analytics Placeholder -->
     <script>
         // Replace with your Google Analytics tracking code
-        // (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-        // (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-        // m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-        // })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-        // ga('create', 'YOUR_TRACKING_ID', 'auto');
-        // ga('send', 'pageview');
         console.log("Google Analytics tracking code should be placed here.");
     </script>
     
@@ -58,7 +123,7 @@
 }
 </script>
 </head>
-<body class="bg-white">
+<body class="bg-[#f8f9fa]">
 <div id="root"></div>
 <script type="module" src="/index.tsx"></script>
 </body>
