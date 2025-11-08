@@ -112,8 +112,11 @@ const SavingsCalculator: React.FC = () => {
     const [step, setStep] = useState(1);
     const [lines, setLines] = useState<string>('');
     const [lineSpends, setLineSpends] = useState<number[]>([]);
+    // FIX: The initial value for reduce was an untyped `{}`, causing TypeScript to infer the state as an empty object.
+    // This has been corrected by explicitly providing the `OttSelection` type to both `useState` and the `reduce` accumulator,
+    // which resolves property access errors throughout the component.
     const [selectedOtts, setSelectedOtts] = useState<OttSelection>(
-        ottServices.reduce((acc, ott) => ({ ...acc, [ott.key]: { selected: false, cost: 0 } }), {})
+        ottServices.reduce<OttSelection>((acc, ott) => ({ ...acc, [ott.key]: { selected: false, cost: 0 } }), {})
     );
     const [results, setResults] = useState<Result[] | null>(null);
     const [error, setError] = useState<string>('');
@@ -286,7 +289,8 @@ const SavingsCalculator: React.FC = () => {
         setStep(1);
         setLines('');
         setLineSpends([]);
-        setSelectedOtts(ottServices.reduce((acc, ott) => ({ ...acc, [ott.key]: { selected: false, cost: 0 } }), {}));
+        // FIX: Similarly, when resetting state, the new object must be correctly typed to avoid reintroducing type errors.
+        setSelectedOtts(ottServices.reduce<OttSelection>((acc, ott) => ({ ...acc, [ott.key]: { selected: false, cost: 0 } }), {}));
         setResults(null);
         setError('');
     };
